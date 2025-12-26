@@ -1,0 +1,37 @@
+#!/bin/bash
+#SBATCH -p hpc-bio-mendel                
+#SBATCH -N 1
+#SBATCH -n 8                       # Reservamos 8 núcleos para las pruebas paralelas
+#SBATCH --chdir=/home/alumno01/lab-py-advan  
+#SBATCH --output=reduc_entregable_%j.out
+
+module load anaconda/2025.06
+
+# 1. Convertimos el notebook a python (usamos --to script que es más estándar)
+echo "Convirtiendo notebook de alumno01..."
+jupyter nbconvert --to script reduc-operation-array-par-alumno01.ipynb
+
+# 2. BUCLE DE TAMAÑOS
+# Incluimos los tamaños pedidos: 10^8 (100M) y 10^9 (1000M)
+for SIZE in 100000000 1000000000; do
+    echo " "
+    echo "=============================================================="
+    echo "    INICIANDO BATERÍA PARA TAMAÑO: $SIZE"
+    echo "=============================================================="
+    
+    # Bucle de Núcleos (1, 2, 4 y 8 procesos/hilos)
+    for CORES in 1 2 4 8; do
+        echo " "
+        echo "Configuración: $CORES Núcleos"
+        
+        # Estas variables indican a las librerías cuántos hilos usar
+        export OMP_NUM_THREADS=$CORES
+        export SLURM_CPUS_PER_TASK=$CORES
+        
+        # Ejecutamos el script generado. El $SIZE se recibe como sys.argv[1]
+        # Usamos python directamente para evitar problemas de caché de ipython
+        ipython reduc-operation-array-par-alumno01.py $SIZE
+    done
+done
+
+echo "Trabajo finalizado con éxito."
