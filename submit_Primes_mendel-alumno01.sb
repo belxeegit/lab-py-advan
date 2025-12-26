@@ -1,0 +1,45 @@
+#!/bin/bash
+#SBATCH --partition=hpc-bio-mendel           # Cola especificada en la práctica 
+#SBATCH --job-name=Primes_Parallel   # Nombre del trabajo
+#SBATCH --nodes=1                    # Usamos 1 nodo
+#SBATCH --cpus-per-task=8            # Reservamos el máximo de hilos que probaremos (8) 
+#SBATCH --output=Primes_Bench_%j.out # Fichero de salida con ID de trabajo
+#SBATCH --error=Primes_Bench_%j.err  # Fichero de errores
+
+# Carga del entorno anaconda indicado [cite: 106]
+module load anaconda/2025.06
+
+echo "-------------------------------------------------------"
+echo "Ejecución de Pruebas de Rendimiento - Suma de Primos"
+echo "Usuario: alumno01 | ID Trabajo: $SLURM_JOB_ID"
+echo "-------------------------------------------------------"
+
+# Definición de las cargas de trabajo y los núcleos a probar 
+NUMEROS=("1000000" "10000000")
+CORES_LIST=(1 2 4 8)
+
+# Bucle principal de experimentos
+for n_value in "${NUMEROS[@]}"; do
+    echo ""
+    echo "======================================================="
+    echo " ANALIZANDO TAMAÑO: $n_value"
+    echo "======================================================="
+    
+    for cpus in "${CORES_LIST[@]}"; do
+        echo "[INFO] Lanzando con $cpus núcleos..."
+        
+        # Configuramos las variables de entorno para que Numba y Multiprocessing 
+        # utilicen exactamente los hilos que queremos testear en esta iteración.
+        export SLURM_CPUS_PER_TASK=$cpus
+        export NUMBA_NUM_THREADS=$cpus
+        export OMP_NUM_THREADS=$cpus
+
+        # Ejecutamos directamente el notebook con ipython como indica la práctica 
+        # Pasamos el valor de N como argumento al notebook
+        ipython primes-par-alumno01.ipynb $n_value
+        
+        echo "-------------------------------------------------------"
+    done
+done
+
+echo "Experimentos finalizados correctamente."
